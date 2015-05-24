@@ -6,6 +6,8 @@ var RTCPeerConnection     = webrtc.RTCPeerConnection;
 var RTCSessionDescription = webrtc.RTCSessionDescription;
 var RTCIceCandidate       = webrtc.RTCIceCandidate;
 
+var howManyPing = 10;
+
 // Utils
 function handle_error(error)
 {
@@ -28,6 +30,8 @@ pc2.onicecandidate = function(candidate) {
   pc1.addIceCandidate(candidate.candidate);
   console.log("PC1: Added ice canidate");
 }
+
+
 
 /** Answer and offer exchange */
 
@@ -103,8 +107,64 @@ function peersConnected() {
   console.log("Peers connected");
 }
 
+/***************************************
+ *          Data Channels              *
+ ***************************************/
+
+var dc1 = pc1.createDataChannel("test");
+var dc2 = null;
+
+dc1.onerror = function (error) {
+  console.log("DC1: Data Channel Error:", error);
+};
+
+dc1.onmessage = function (event) {
+  var data = event.data;
+  console.log("DC1: received '"+data+"'");
+  console.log("DC1: sending 'pong'");
+  dc1.send("pong");
+};
+
+dc1.onopen = function () {
+  dc1.send("DC1: data channle opened");
+};
+
+dc1.onclose = function () {
+  console.log("The Data Channel is Closed");
+};
+
+pc2.ondatachannel = function(event) {
+  dc2 = event.channel;
+  dc2.onopen = function() {
+    console.log("PC2: data channel open");
+    dc2.onmessage = function(event) {
+      var data = event.data;
+      console.log("DC2: received '"+data+"'");
+      if ( howManyPing > 0) {
+        sendPing();
+        howManyPing--;
+      } else {
+        end();
+      }
+    }
+    sendPing();
+  };
+}
+
+function sendPing() {
+  console.log("DC2: sending 'ping'");
+  dc2.send("ping");
+}
+
 function run() {
   createOfferPC1();
+}
+
+function end() {
+  console.log('cleanup');
+  pc1.close();
+  pc2.close();
+  console.log('done');
 }
 
 run();
