@@ -54,7 +54,7 @@ function sendOffer(offer) {
 }
 
 function sendAnswer(answer) {
-  onAnswer(answer);
+  onAnswerPC1(answer);
 }
 
 function handleOfferPC1(offer) {
@@ -63,27 +63,30 @@ function handleOfferPC1(offer) {
 }
 
 function handleAnswerPC2(answer) {
-  console.log("PC2: offer answer");
+  console.log("PC2: answer created");
   setLocalDescriptionAndSendAnswerPC2(answer);
 }
 
 function setLocalDescriptionAndSendOfferPC1(desc){
   console.log('PC1: set local description');
-  console.log(new RTCSessionDescription(desc));
-  console.log(desc);
-  pc1.setLocalDescription( new RTCSessionDescription(desc), sendOffer, handle_error);
+  pc1.setLocalDescription( new RTCSessionDescription(desc),
+    sendOffer.bind(this, desc), handle_error);
 }
 
 function setLocalDescriptionAndSendAnswerPC2(desc){
   console.log('PC2: set local description');
-  pc2.setLocalDescription( new RTCSessionDescription(desc), sendAnswer, handle_error);
+  pc2.setLocalDescription( new RTCSessionDescription(desc),
+    sendAnswer.bind(this, desc), handle_error);
 }
 
 function setRemoteDescriptionAndCreateAnswerPC2(desc){
   console.log('PC2: set remote description');
-  console.log(new RTCSessionDescription(desc));
-  console.log(desc);
   pc2.setRemoteDescription(new RTCSessionDescription(desc), createAnswerPC2, handle_error);
+}
+
+function setRemoteDescriptionPC1(desc) {
+  console.log('PC1: set remote description');
+  pc1.setRemoteDescription(new RTCSessionDescription(desc), peersConnected, handle_error);
 }
 
 function onOfferPC2(offer) {
@@ -91,4 +94,17 @@ function onOfferPC2(offer) {
   setRemoteDescriptionAndCreateAnswerPC2(offer);
 }
 
-createOfferPC1();
+function onAnswerPC1(answer) {
+  console.log("PC1: answer received");
+  setRemoteDescriptionPC1(answer);
+}
+
+function peersConnected() {
+  console.log("Peers connected");
+}
+
+function run() {
+  createOfferPC1();
+}
+
+run();
