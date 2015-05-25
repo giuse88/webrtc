@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/giuse88/webrtc",
   "dependencies": {
+    "babel": "^5.4.7",
     "wrtc": "0.0.55"
   }
 }

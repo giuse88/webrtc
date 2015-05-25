@@ -1,5 +1,7 @@
 console.log(" ===== Ping pong ==== ");
 
+import Signaling from "./signaling";
+
 var webrtc = require("wrtc");
 
 var RTCPeerConnection     = webrtc.RTCPeerConnection;
@@ -7,6 +9,7 @@ var RTCSessionDescription = webrtc.RTCSessionDescription;
 var RTCIceCandidate       = webrtc.RTCIceCandidate;
 
 var howManyPing = 10;
+
 
 // Utils
 function handle_error(error)
@@ -17,27 +20,50 @@ function handle_error(error)
 var pc1 = new RTCPeerConnection();
 var pc2 = new RTCPeerConnection();
 
-// First step is to create add the handler for ice candidates
+pc1.oniceconnectionstatechange = () => console.log("PC1: " + pc1.iceConnectionState);
+pc2.oniceconnectionstatechange = () => console.log("PC2: " + pc2.iceConnectionState);
 
-pc1.oniceconnectionstatechange = function() {
-  console.log("PC1: " + pc1.iceConnectionState)
-}
-pc2.oniceconnectionstatechange = function() {
- console.log("PC2: " + pc2.iceConnectionState);
-}
+import { EventEmitter } from "events";
+
+var E1 = new EventEmitter();
+var E2 = new EventEmitter();
+
+
+var S1 = new Signaling({
+  name:"PC1",
+  emiter: E1,
+  listener: E2
+});
+
+var S2 = new Signaling({
+  name:"PC2",
+  emiter: E2,
+  listener: E1
+});
+
+S1.onIceCandidate( candidate => {
+  pc1.addIceCandidate(new RTCIceCandidate(candidate));
+  console.log("PC1: added ice canidate");
+});
+
+S2.onIceCandidate( candidate => {
+  pc2.addIceCandidate(new RTCIceCandidate(candidate));
+  console.log("PC2: added ice canidate");
+});
+
+S1.onAnswer(onAnswerPC1);
+S2.onOffer(onOfferPC2);
 
 pc1.onicecandidate = function(candidate) {
   if(!candidate.candidate) return;
-  console.log("PC1: Candidate : ", candidate.candidate);
-  console.log("PC2: Added ice canidate");
-  pc2.addIceCandidate(candidate.candidate);
+  S1.sendIceCandidate(candidate.candidate)
+  // console.log("PC1 Canidate : ", candidate.candidate);
 }
 
 pc2.onicecandidate = function(candidate) {
   if(!candidate.candidate) return;
-  console.log("PC2 Candidate : ", candidate.candidate);
-  console.log("PC1: Added ice canidate");
-  pc1.addIceCandidate(candidate.candidate);
+  // console.log("PC2 Canidate : ", candidate.candidate);
+  S2.sendIceCandidate(candidate.candidate)
 }
 
 /** Answer and offer exchange */
@@ -120,6 +146,8 @@ function peersConnected() {
  *          Data Channels              *
  ***************************************/
 
+console.log("Creating data channels");
+
 var dc1 = pc1.createDataChannel("test");
 var dc2 = null;
 
@@ -135,6 +163,7 @@ dc1.onmessage = function (event) {
 };
 
 dc1.onopen = function () {
+  console.log("Data Channel open");
   dc1.send("DC1: data channle opened");
 };
 
